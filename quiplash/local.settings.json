@@ -1,0 +1,17 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsStorage": "",
+    "AzureCosmosDBConnectionString": "<PASTE YOUR COSMOS DB PRIMARY CONNECTION STRING>",
+    "DatabaseName": "quiplash",
+    "PlayerContainerName": "player",
+    "PromptContainerName": "prompt",
+    "DeploymentURL": "<YOUR DEPLOYMENT URL>",
+    "FunctionAppKey": "<YOUR FUNCTION APP KEY>",
+    "TranslationEndpoint": "<YOUR TRANSLATION ENDPOINT>",
+    "TranslationKey": "<YOUR TRANSLATION KEY>",
+    "ContentSafetyEndpoint": "<YOUR CONTENT SAFETY ENDPOINT>",
+    "ContentSafetyKey": "<YOUR CONTENT SAFETY KEY>"
+  }
+}
