@@ -320,11 +320,11 @@ def utils_get(req: func.HttpRequest) -> func.HttpResponse:
 @app.function_name(name="utils_welcome")
 @app.cosmos_db_trigger_v3(
     arg_name="documents",
-    container_name="player",
+    connection_string_setting="AzureCosmosDBConnectionString",
     database_name="quiplash",
-    connection="AzureCosmosDBConnectionString",
-    lease_container_name="leases",
-    create_lease_container_if_not_exists=True,
+    collection_name="player",
+    lease_collection_name="leases",
+    create_lease_collection_if_not_exists=True,
 )
 def utils_welcome(documents: func.DocumentList) -> None:
     """
