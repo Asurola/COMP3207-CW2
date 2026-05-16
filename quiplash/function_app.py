@@ -7,6 +7,7 @@ import os
 import json
 import logging
 import azure.functions as func
+import uuid
 from shared_code.helpers import (
     get_cosmos_client,
     get_player_container,
@@ -175,6 +176,7 @@ def prompt_create(req: func.HttpRequest) -> func.HttpResponse:
         # Store the prompt
         prompt_container = get_prompt_container(client)
         prompt_doc = {
+            "id": str(uuid.uuid4()),
             "username": username,
             "texts": texts,
             "tags": unique_tags,
@@ -372,6 +374,7 @@ def utils_welcome(documents: func.DocumentList) -> None:
             texts = [{"language": "en", "text": welcome_text}]
 
         prompt_doc = {
+            "id": str(uuid.uuid4()),
             "username": username,
             "texts": texts,
             "tags": [],
