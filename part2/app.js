@@ -18,6 +18,24 @@ app.get('/display', (req, res) => {
   res.render('display');
 });
 
+app.use(express.json());
+app.post('/admin/reset', (req, res) => {
+  state.phase = 'joining';
+  state.players = [];
+  state.audience = [];
+  state.admin = null;
+  state.currentRound = 1;
+  state.sessionPrompts = [];
+  state.promptSubmitters = [];
+  state.activePrompts = [];
+  state.currentPromptIndex = 0;
+  state.currentVoters = [];
+  state.answeredPlayers = [];
+  state.scores = {};
+  broadcast();
+  res.json({ result: true });
+});
+
 const BACKEND_ENDPOINT = process.env.BACKEND || 'http://localhost:8181';
 
 let state = {
