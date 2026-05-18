@@ -1,2 +1,5 @@
 local.settings.json
 .venv
+CLAUDE.md
+/part2/docs
+node_modules

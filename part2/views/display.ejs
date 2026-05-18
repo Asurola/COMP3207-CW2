@@ -3,16 +3,192 @@
 
     <%- include('header'); -%>
 
-    <h2 class="title">ECS Example Game</h2>
+    <h2 class="title">Quiplash — Display</h2>
 
     <div id="game">
-        <div v-if="connected">
-            <ul id="chat">
-                <li v-for="message in messages">{{message}}</li>
-            </ul>
-        </div>
-        <div v-else>
+        <div v-if="!connected" class="text-center py-4">
             <p>Connecting...</p>
+        </div>
+
+        <div v-else>
+
+            <!-- JOINING PHASE -->
+            <div v-if="gameState.phase === 'joining'" class="text-center">
+                <h4>Waiting for players to join</h4>
+                <p class="lead">Join at: <strong>{{ joinUrl }}</strong></p>
+                <p class="text-muted">Players joined ({{ gameState.players.length }}/8):</p>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                    <span v-for="p in gameState.players" :key="p.username" class="badge bg-primary fs-6 p-2">
+                        {{ p.username }}<span v-if="p.username === gameState.admin"> 👑</span>
+                    </span>
+                </div>
+                <p v-if="gameState.players.length < 3" class="text-muted">
+                    Waiting for at least {{ 3 - gameState.players.length }} more player(s)...
+                </p>
+            </div>
+
+            <!-- PROMPT PHASE -->
+            <div v-else-if="gameState.phase === 'prompt'" class="text-center">
+                <h4>Round {{ gameState.currentRound }} — Submit Your Prompts!</h4>
+                <p class="text-muted">{{ gameState.sessionPrompts.length }} prompt(s) submitted so far</p>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mb-3">
+                    <span v-for="s in gameState.promptSubmitters" :key="s" class="badge bg-success fs-6 p-2">
+                        ✓ {{ s }}
+                    </span>
+                </div>
+                <p v-if="gameState.promptSubmitters.length < gameState.players.length" class="text-muted">
+                    Still waiting:
+                    <span v-for="p in gameState.players" :key="p.username">
+                        <span v-if="gameState.promptSubmitters.indexOf(p.username) === -1"
+                            class="badge bg-warning text-dark me-1">{{ p.username }}</span>
+                    </span>
+                </p>
+            </div>
+
+            <!-- ANSWERING PHASE -->
+            <div v-else-if="gameState.phase === 'answering'">
+                <h4 class="text-center">Round {{ gameState.currentRound }} — Players are Answering</h4>
+                <div class="row justify-content-center mt-3">
+                    <div class="col-md-6">
+                        <div v-for="p in gameState.players" :key="p.username" class="mb-2">
+                            <div :class="'d-flex align-items-center p-2 rounded ' +
+                                (gameState.answeredPlayers.indexOf(p.username) !== -1 ? 'bg-success text-white' : 'bg-light border')">
+                                <span class="me-2 fs-5">
+                                    {{ gameState.answeredPlayers.indexOf(p.username) !== -1 ? '✓' : '⏳' }}
+                                </span>
+                                <strong>{{ p.username }}</strong>
+                                <span class="ms-auto">
+                                    {{ gameState.answeredPlayers.indexOf(p.username) !== -1 ? 'Done' : 'Writing...' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VOTING PHASE -->
+            <div v-else-if="gameState.phase === 'voting'">
+                <h4 class="text-center">Round {{ gameState.currentRound }} — Vote Now!</h4>
+                <p class="text-center text-muted">
+                    Prompt {{ gameState.currentPromptIndex + 1 }} of {{ gameState.activePrompts.length }}
+                </p>
+                <div v-if="currentPrompt">
+                    <div class="card mb-4 border-dark">
+                        <div class="card-body text-center">
+                            <h3>{{ currentPrompt.text }}</h3>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="card answer-card text-center h-100 border-primary">
+                                <div class="card-header bg-primary text-white fs-5"><strong>A</strong></div>
+                                <div class="card-body d-flex align-items-center justify-content-center">
+                                    <p class="fs-4 mb-0">{{ currentPrompt.answers[currentPrompt.players[0]] || '(no answer)' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card answer-card text-center h-100 border-success">
+                                <div class="card-header bg-success text-white fs-5"><strong>B</strong></div>
+                                <div class="card-body d-flex align-items-center justify-content-center">
+                                    <p class="fs-4 mb-0">{{ currentPrompt.answers[currentPrompt.players[1]] || '(no answer)' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-center text-muted mt-2">{{ gameState.currentVoters.length }} vote(s) cast</p>
+                </div>
+            </div>
+
+            <!-- VOTING RESULTS PHASE -->
+            <div v-else-if="gameState.phase === 'voting_results'">
+                <h4 class="text-center">Results!</h4>
+                <div v-if="currentPrompt">
+                    <div class="card mb-4 border-dark">
+                        <div class="card-body text-center">
+                            <h4>{{ currentPrompt.text }}</h4>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6" v-for="(player, idx) in currentPrompt.players" :key="player">
+                            <div :class="'card text-center h-100 result-card ' +
+                                ((currentPrompt.votes[player] || 0) > (currentPrompt.votes[currentPrompt.players[idx === 0 ? 1 : 0]] || 0) ? 'border-warning border-3' : '')">
+                                <div :class="'card-header fs-5 ' + (idx === 0 ? 'bg-primary text-white' : 'bg-success text-white')">
+                                    <strong>{{ idx === 0 ? 'A' : 'B' }}</strong>
+                                </div>
+                                <div class="card-body">
+                                    <p class="fs-4 answer-text">{{ currentPrompt.answers[player] || '(no answer)' }}</p>
+                                    <p class="author fs-5">— {{ player }}</p>
+                                    <span class="badge bg-primary fs-4">
+                                        {{ currentPrompt.votes[player] || 0 }}
+                                        vote{{ (currentPrompt.votes[player] || 0) !== 1 ? 's' : '' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SCORES PHASE -->
+            <div v-else-if="gameState.phase === 'scores'">
+                <h4 class="text-center">Leaderboard — After Round {{ gameState.currentRound }}</h4>
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <table class="table table-striped table-lg">
+                            <thead>
+                                <tr><th>#</th><th>Player</th><th>Score</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(player, idx) in sortedPlayers" :key="player.username">
+                                    <td class="fs-5">{{ idx + 1 }}</td>
+                                    <td class="fs-5">{{ player.username }}</td>
+                                    <td class="fs-5">{{ gameState.scores[player.username] || 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAME OVER PHASE -->
+            <div v-else-if="gameState.phase === 'game_over'">
+                <h3 class="text-center mb-4">🎉 Game Over! 🎉</h3>
+                <div v-if="sortedPlayers.length >= 1" class="d-flex justify-content-center align-items-end gap-4 mb-5">
+                    <div v-if="sortedPlayers.length >= 2" class="podium-place text-center">
+                        <div class="fw-bold fs-5">{{ sortedPlayers[1].username }}</div>
+                        <div class="text-muted">{{ gameState.scores[sortedPlayers[1].username] || 0 }} pts</div>
+                        <div class="podium-bar bg-secondary text-white" style="height:90px;width:130px">2nd</div>
+                    </div>
+                    <div class="podium-place text-center">
+                        <div class="fw-bold fs-3">🏆 {{ sortedPlayers[0].username }}</div>
+                        <div class="text-muted fs-5">{{ gameState.scores[sortedPlayers[0].username] || 0 }} pts</div>
+                        <div class="podium-bar bg-warning" style="height:140px;width:130px">1st</div>
+                    </div>
+                    <div v-if="sortedPlayers.length >= 3" class="podium-place text-center">
+                        <div class="fw-bold fs-5">{{ sortedPlayers[2].username }}</div>
+                        <div class="text-muted">{{ gameState.scores[sortedPlayers[2].username] || 0 }} pts</div>
+                        <div class="podium-bar text-white" style="height:60px;width:130px;background:#cd7f32">3rd</div>
+                    </div>
+                </div>
+                <div class="row justify-content-center">
+                    <div class="col-md-6">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr><th>#</th><th>Player</th><th>Final Score</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(player, idx) in sortedPlayers" :key="player.username">
+                                    <td>{{ idx + 1 }}</td>
+                                    <td>{{ player.username }}</td>
+                                    <td>{{ gameState.scores[player.username] || 0 }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
